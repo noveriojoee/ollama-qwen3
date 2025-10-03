@@ -29,15 +29,15 @@ jobs:
 
       - name: Build base image (no model baked)
         run: |
-          docker build -t $IMAGE_NAME:base -f Dockerfile .
+          docker build -t $IMAGE_NAME:latest -f Dockerfile .
 
       - name: Commit container to image with model
         run: |
-          docker commit ollama-build $IMAGE_NAME:with-model
+          docker commit ollama-build $IMAGE_NAME:latest
 
       - name: Tag final image
         run: |
-          docker tag $IMAGE_NAME:with-model $IMAGE_NAME:latest
+          docker tag $IMAGE_NAME:latest $IMAGE_NAME:latest
 
       - name: Push final image to Docker Hub
         run: |
