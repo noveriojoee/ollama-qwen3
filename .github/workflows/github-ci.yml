@@ -46,7 +46,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker rm -f ollama-build || true
+          docker rm -f $IMAGE_NAME:latest || true
           docker image prune -af || true
 
       - name: Report
