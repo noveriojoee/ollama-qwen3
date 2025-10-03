@@ -31,30 +31,6 @@ jobs:
         run: |
           docker build -t $IMAGE_NAME:base -f Dockerfile .
 
-      - name: Start helper container
-        run: |
-          # keep container running to allow running `ollama pull` inside
-          # the base image has an ENTRYPOINT of `ollama` so passing `sleep` without
-          # overriding entrypoint causes `ollama sleep` (invalid). Clear entrypoint.
-          docker run -d --entrypoint "" --name ollama-build $IMAGE_NAME:base sleep infinity || (
-            echo "Failed to start helper container"; docker images --format 'table {{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}'; exit 1)
-
-      - name: Pull model inside container (retry)
-        run: |
-          set -e
-          ATTEMPTS=3
-          for i in $(seq 1 $ATTEMPTS); do
-            echo "Attempt $i to pull qwen3 inside container..."
-            if docker exec ollama-build ollama pull qwen3; then
-              echo "Model pulled successfully"
-              break
-            fi
-            if [ "$i" -eq "$ATTEMPTS" ]; then
-              echo "Failed to pull model after $ATTEMPTS attempts"; docker logs ollama-build || true; exit 1
-            fi
-            sleep 5
-          done
-
       - name: Commit container to image with model
         run: |
           docker commit ollama-build $IMAGE_NAME:with-model
