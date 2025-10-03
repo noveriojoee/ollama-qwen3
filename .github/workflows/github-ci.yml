@@ -21,31 +21,54 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: noveriojoee
           password: Testing12345
 
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: List pushed image (Docker Hub)
+      - name: Build base image (no model baked)
         run: |
-          echo "Image pushed: ${{ env.IMAGE_NAME }}:latest"
+          docker build -t $IMAGE_NAME:base -f Dockerfile .
+
+      - name: Start helper container
+        run: |
+          # keep container running to allow running `ollama pull` inside
+          docker run -d --name ollama-build $IMAGE_NAME:base sleep infinity
+
+      - name: Pull model inside container (retry)
+        run: |
+          set -e
+          ATTEMPTS=3
+          for i in $(seq 1 $ATTEMPTS); do
+            echo "Attempt $i to pull qwen3 inside container..."
+            if docker exec ollama-build ollama pull qwen3; then
+              echo "Model pulled successfully"
+              break
+            fi
+            if [ "$i" -eq "$ATTEMPTS" ]; then
+              echo "Failed to pull model after $ATTEMPTS attempts"; docker logs ollama-build || true; exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Commit container to image with model
+        run: |
+          docker commit ollama-build $IMAGE_NAME:with-model
+
+      - name: Tag final image
+        run: |
+          docker tag $IMAGE_NAME:with-model $IMAGE_NAME:latest
+
+      - name: Push final image to Docker Hub
+        run: |
+          docker push $IMAGE_NAME:latest
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f ollama-build || true
+          docker image prune -af || true
+
+      - name: Report
+        run: echo "Pushed $IMAGE_NAME:latest"
