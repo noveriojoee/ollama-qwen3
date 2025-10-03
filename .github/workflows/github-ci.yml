@@ -33,11 +33,11 @@ jobs:
 
       - name: Commit container to image with model
         run: |
-          docker commit ollama-build $IMAGE_NAME:latest
+          docker commit $IMAGE_NAME:latest
 
       - name: Tag final image
         run: |
-          docker tag $IMAGE_NAME:latest $IMAGE_NAME:latest
+          docker tag $IMAGE_NAME:latest
 
       - name: Push final image to Docker Hub
         run: |
