@@ -34,7 +34,10 @@ jobs:
       - name: Start helper container
         run: |
           # keep container running to allow running `ollama pull` inside
-          docker run -d --name ollama-build $IMAGE_NAME:base sleep infinity
+          # the base image has an ENTRYPOINT of `ollama` so passing `sleep` without
+          # overriding entrypoint causes `ollama sleep` (invalid). Clear entrypoint.
+          docker run -d --entrypoint "" --name ollama-build $IMAGE_NAME:base sleep infinity || (
+            echo "Failed to start helper container"; docker images --format 'table {{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}'; exit 1)
 
       - name: Pull model inside container (retry)
         run: |
