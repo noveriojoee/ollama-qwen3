@@ -16,18 +16,22 @@ gcloud builds submit \
    gcloud run deploy ollama-gpu-service \
      --image docker.io/noveriojoee/ollama-qwen3:latest \
      --region us-central1 \
-     --port 11434 \
+     --port 8080 \
      --gpu 1 --gpu-type nvidia-l4 \
      --cpu 4 --memory 16Gi \
      --no-cpu-throttling \
-     --concurrency 1 --max-instances 1 \
-     --allow-unauthenticated \
-     --command "ollama" \
-     --args "serve"
+     --no-gpu-zonal-redundancy \
+     --min-instances 0 \
+     --max-instances 1 \
+     --concurrency 1 \
+     --set-env-vars OLLAMA_NUM_PARALLEL=1 \
+     --allow-unauthenticated
 
 # Show the deployed service URL
 gcloud run services describe ollama-gpu-service --region us-central1 --format="value(status.url)"
 
+# Delete the instances here..
+gcloud run services delete ollama-gpu-service --region us-central1 --quiet
 
 
 ## Notes:
